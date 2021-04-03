@@ -1,0 +1,38 @@
+kind: pipeline
+type: docker
+name: build
+
+steps:
+- name: build
+  image: golang:1.16
+  volumes:
+  - name: deps
+    path: /go
+  commands:
+  - go get
+  - go build
+
+- name: test
+  image: golang:1.16
+  volumes:
+  - name: deps
+    path: /go
+  environment:
+    EVERY8D_USERNAME:
+      from_secret: EVERY8D_USERNAME
+    EVERY8D_PASSWORD:
+      from_secret: EVERY8D_PASSWORD
+  commands:
+  - go test -v
+
+- name: code-analysis
+  image: aosapps/drone-sonar-plugin
+  settings:
+    sonar_host:
+      from_secret: sonar_host
+    sonar_token:
+      from_secret: sonar_token
+
+volumes:
+- name: deps
+  temp: {}
