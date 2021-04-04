@@ -31,7 +31,7 @@ steps:
     MITAKE_PASSWORD:
       from_secret: MITAKE_PASSWORD
   commands:
-  - go test -v
+  - go test -v -cover -coverprofile coverage.out -json > test-report.out
 
 - name: code-analysis
   image: aosapps/drone-sonar-plugin
