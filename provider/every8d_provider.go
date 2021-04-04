@@ -9,9 +9,8 @@ import (
 	"github.com/go-resty/resty/v2"
 )
 
-var baseURL = "https://oms.every8d.com/API21/HTTP"
-
 type Every8DProvider struct {
+	baseURL string
 	account SMSAccount
 }
 
@@ -21,7 +20,7 @@ func (p *Every8DProvider) SendSMS(phone, message string) {
 
 func (p *Every8DProvider) Credit() (int, error) {
 	client := resty.New().
-		SetHostURL(baseURL)
+		SetHostURL(p.baseURL)
 
 	resp, err := client.R().
 		SetFormData(p.Account()).

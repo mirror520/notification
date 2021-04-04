@@ -3,6 +3,10 @@ package environment
 import "os"
 
 var (
+	EVERY8D_BASEURL  = os.Getenv("EVERY8D_BASEURL")
 	EVERY8D_USERNAME = os.Getenv("EVERY8D_USERNAME")
 	EVERY8D_PASSWORD = os.Getenv("EVERY8D_PASSWORD")
+	MITAKE_BASEURL   = os.Getenv("MITAKE_BASEURL")
+	MITAKE_USERNAME  = os.Getenv("MITAKE_USERNAME")
+	MITAKE_PASSWORD  = os.Getenv("MITAKE_PASSWORD")
 )

@@ -18,10 +18,18 @@ steps:
   - name: deps
     path: /go
   environment:
+    EVERY8D_BASEURL:
+      from_secret: EVERY8D_BASEURL
     EVERY8D_USERNAME:
       from_secret: EVERY8D_USERNAME
     EVERY8D_PASSWORD:
       from_secret: EVERY8D_PASSWORD
+    MITAKE_BASEURL:
+      from_secret: MITAKE_BASEURL
+    MITAKE_USERNAME:
+      from_secret: MITAKE_USERNAME
+    MITAKE_PASSWORD:
+      from_secret: MITAKE_PASSWORD
   commands:
   - go test -v
 

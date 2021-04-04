@@ -23,16 +23,25 @@ type SMSAccount struct {
 	Password string
 }
 
-func CreateSMSProviderFactory(provider SMSProviderType) (SMSProvider, error) {
+func SMSProviderCreateFactory(provider SMSProviderType) (SMSProvider, error) {
 	switch provider {
 	case Every8D:
-		return &Every8DProvider{account: SMSAccount{
-			Username: environment.EVERY8D_USERNAME,
-			Password: environment.EVERY8D_PASSWORD,
-		}}, nil
+		return &Every8DProvider{
+			baseURL: environment.EVERY8D_BASEURL,
+			account: SMSAccount{
+				Username: environment.EVERY8D_USERNAME,
+				Password: environment.EVERY8D_PASSWORD,
+			},
+		}, nil
 
 	case Mitake:
-		return &MitakeProvider{}, nil
+		return &MitakeProvider{
+			baseURL: environment.MITAKE_BASEURL,
+			account: SMSAccount{
+				Username: environment.MITAKE_USERNAME,
+				Password: environment.MITAKE_PASSWORD,
+			},
+		}, nil
 	}
 
 	return nil, errors.New("無法提供此簡訊供應商")
