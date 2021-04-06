@@ -2,9 +2,6 @@ kind: pipeline
 type: docker
 name: build
 
-workspace:
-  path: /drone/${DRONE_REPO_NAME}
-
 steps:
 - name: build
   image: golang:1.16
@@ -14,6 +11,7 @@ steps:
   commands:
   - go get
   - go build
+  - rm sms
 
 - name: test
   image: golang:1.16
