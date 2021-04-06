@@ -36,8 +36,21 @@ func SMSCreditHandler(ctx *gin.Context) {
 		"event": "SMSCredit",
 	})
 
-	providerType := provider.Every8D
-	smsProvider, err := provider.CreateSMSProviderFactory(providerType)
+	var providerType provider.SMSProviderType
+	smsID := ctx.Param("sms_id")
+	switch smsID {
+	case "every8d":
+		providerType = provider.Every8D
+
+	case "mitake":
+		providerType = provider.Mitake
+	}
+
+	logger = logger.WithFields(log.Fields{
+		"type": smsID,
+	})
+
+	smsProvider, err := provider.SMSProviderCreateFactory(providerType)
 	if err != nil {
 		result := model.NewFailureResult().SetLogger(logger)
 		result.AddInfo(err.Error())
