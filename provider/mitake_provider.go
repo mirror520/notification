@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/go-resty/resty/v2"
+	"github.com/mirror520/sms/model"
 )
 
 type MitakeProvider struct {
@@ -16,7 +17,46 @@ type MitakeProvider struct {
 	account SMSAccount
 }
 
-func (p *MitakeProvider) SendSMS(phone, message string) {
+func (p *MitakeProvider) SendSMS(sms *model.SMS) (*model.SMSResult, error) {
+	client := resty.New().
+		SetHostURL(p.baseURL)
+
+	resp, err := client.R().
+		SetQueryString("CharsetURL=UTF-8").
+		SetFormData(p.AccountWithSMS(sms)).
+		Post("/SmSend")
+
+	if (err != nil) || (resp.StatusCode() != http.StatusOK) {
+		return nil, errors.New("傳送簡訊失敗")
+	}
+
+	var result = &model.SMSResult{}
+	scanner := bufio.NewScanner(bytes.NewReader(resp.Body()))
+	for scanner.Scan() {
+		line := scanner.Text()
+
+		switch {
+		case strings.HasPrefix(line, "statuscode"):
+			statusCode := strings.TrimPrefix(line, "statuscode=")
+
+			if !strings.ContainsAny(statusCode, "0124") {
+				scanner.Scan()
+				errorMsg := strings.TrimPrefix(scanner.Text(), "Error=")
+				return nil, errors.New(errorMsg)
+			}
+
+		case strings.HasPrefix(line, "msgid"):
+			msgID := strings.TrimPrefix(line, "msgid=")
+			result.ID = msgID
+
+		case strings.HasPrefix(line, "AccountPoint"):
+			accountPoint := strings.TrimPrefix(line, "AccountPoint=")
+			credit, _ := strconv.Atoi(accountPoint)
+			result.Credit = credit
+		}
+	}
+
+	return result, nil
 }
 
 func (p *MitakeProvider) Credit() (int, error) {
@@ -28,21 +68,21 @@ func (p *MitakeProvider) Credit() (int, error) {
 		Post("/SmQuery")
 
 	if (err != nil) || (resp.StatusCode() != http.StatusOK) {
-		return 0, errors.New("查詢餘額失敗")
+		return -1, errors.New("查詢餘額失敗")
 	}
 
 	scanner := bufio.NewScanner(bytes.NewReader(resp.Body()))
 	scanner.Scan()
 	line := scanner.Text()
 
-	if line == "statuscode=e" {
+	if strings.TrimPrefix(line, "statuscode=") == "e" {
 		scanner.Scan()
-		errorMsg := scanner.Text()
-		return 0, errors.New(strings.Split(errorMsg, "=")[1])
+		errorMsg := strings.TrimPrefix(scanner.Text(), "Error=")
+		return -1, errors.New(errorMsg)
 	}
 
-	successMsg := strings.Split(line, "=")
-	credit, _ := strconv.Atoi(successMsg[1])
+	accountPoint := strings.TrimPrefix(line, "AccountPoint=")
+	credit, _ := strconv.Atoi(accountPoint)
 
 	return credit, nil
 }
@@ -52,4 +92,12 @@ func (p *MitakeProvider) Account() map[string]string {
 		"username": p.account.Username,
 		"password": p.account.Password,
 	}
+}
+
+func (p *MitakeProvider) AccountWithSMS(sms *model.SMS) map[string]string {
+	account := p.Account()
+	account["dstaddr"] = sms.Phone
+	account["smbody"] = sms.Message
+	account["destname"] = sms.Comment
+	return account
 }

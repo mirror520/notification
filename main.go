@@ -17,7 +17,8 @@ func setRouter() *gin.Engine {
 	{
 		sms.GET("/status", SMSStatusHandler)
 		sms.GET("/credit/:sms_id", SMSCreditHandler)
-		sms.POST("/:phone/send", SendSMSToPhoneHandler)
+		sms.POST("/:sms_id/send", SendSMSHandler)
+		// sms.POST("/master/send", SendSMSHandler)
 		sms.PATCH("/switch/:sms_id/master", SwitchSMSMasterHandler)
 	}
 	return router
@@ -47,7 +48,7 @@ func SMSCreditHandler(ctx *gin.Context) {
 	}
 
 	logger = logger.WithFields(log.Fields{
-		"type": smsID,
+		"provider": smsID,
 	})
 
 	smsProvider, err := provider.SMSProviderCreateFactory(providerType)
@@ -66,6 +67,10 @@ func SMSCreditHandler(ctx *gin.Context) {
 		return
 	}
 
+	logger = logger.WithFields(log.Fields{
+		"credit": credit,
+	})
+
 	result := model.NewSuccessResult().SetLogger(logger)
 	result.AddInfo("查詢餘額成功")
 	result.SetData(credit)
@@ -73,7 +78,66 @@ func SMSCreditHandler(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, result)
 }
 
-func SendSMSToPhoneHandler(ctx *gin.Context) {
+func SendSMSHandler(ctx *gin.Context) {
+	logger := log.WithFields(log.Fields{
+		"event": "SendSMS",
+	})
+
+	var providerType provider.SMSProviderType
+	smsID := ctx.Param("sms_id")
+	switch smsID {
+	case "master":
+		providerType = provider.Every8D
+
+	case "every8d":
+		providerType = provider.Every8D
+
+	case "mitake":
+		providerType = provider.Mitake
+
+	}
+
+	logger = logger.WithFields(log.Fields{
+		"provider": smsID,
+	})
+
+	smsProvider, err := provider.SMSProviderCreateFactory(providerType)
+	if err != nil {
+		result := model.NewFailureResult().SetLogger(logger)
+		result.AddInfo(err.Error())
+		ctx.AbortWithStatusJSON(http.StatusUnprocessableEntity, result)
+		return
+	}
+
+	var sms model.SMS
+	if err := ctx.ShouldBind(&sms); err != nil {
+		result := model.NewFailureResult().SetLogger(logger)
+		result.AddInfo("您輸入的資料格式錯誤")
+		result.AddInfo(err.Error())
+		ctx.AbortWithStatusJSON(http.StatusUnprocessableEntity, result)
+		return
+	}
+
+	if gin.Mode() != gin.TestMode {
+		logger = logger.WithFields(log.Fields{
+			"phone": sms.Phone,
+		})
+	}
+
+	smsResult, err := smsProvider.SendSMS(&sms)
+	if err != nil {
+		result := model.NewFailureResult().SetLogger(logger)
+		result.AddInfo("簡訊發送失敗")
+		result.AddInfo(err.Error())
+		ctx.AbortWithStatusJSON(http.StatusUnprocessableEntity, result)
+		return
+	}
+
+	result := model.NewSuccessResult().SetLogger(logger)
+	result.AddInfo("簡訊發送成功")
+	result.SetData(&smsResult)
+
+	ctx.JSON(http.StatusOK, result)
 }
 
 func SwitchSMSMasterHandler(ctx *gin.Context) {
