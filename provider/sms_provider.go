@@ -4,10 +4,11 @@ import (
 	"errors"
 
 	"github.com/mirror520/sms/environment"
+	"github.com/mirror520/sms/model"
 )
 
 type SMSProvider interface {
-	SendSMS(phone, message string)
+	SendSMS(*model.SMS) (*model.SMSResult, error)
 	Credit() (int, error)
 }
 
