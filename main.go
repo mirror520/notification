@@ -101,18 +101,17 @@ func SendSMSHandler(ctx *gin.Context) {
 		"provider": smsID,
 	})
 
-	smsProvider, err := provider.SMSProviderCreateFactory(providerType)
-	if err != nil {
-		result := model.NewFailureResult().SetLogger(logger)
-		result.AddInfo(err.Error())
-		ctx.AbortWithStatusJSON(http.StatusUnprocessableEntity, result)
-		return
-	}
-
 	var sms model.SMS
 	if err := ctx.ShouldBind(&sms); err != nil {
 		result := model.NewFailureResult().SetLogger(logger)
 		result.AddInfo("您輸入的資料格式錯誤")
+		ctx.AbortWithStatusJSON(http.StatusUnprocessableEntity, result)
+		return
+	}
+
+	smsProvider, err := provider.SMSProviderCreateFactory(providerType)
+	if err != nil {
+		result := model.NewFailureResult().SetLogger(logger)
 		result.AddInfo(err.Error())
 		ctx.AbortWithStatusJSON(http.StatusUnprocessableEntity, result)
 		return
@@ -127,7 +126,6 @@ func SendSMSHandler(ctx *gin.Context) {
 	smsResult, err := smsProvider.SendSMS(&sms)
 	if err != nil {
 		result := model.NewFailureResult().SetLogger(logger)
-		result.AddInfo("簡訊發送失敗")
 		result.AddInfo(err.Error())
 		ctx.AbortWithStatusJSON(http.StatusUnprocessableEntity, result)
 		return

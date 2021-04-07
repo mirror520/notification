@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -36,13 +37,14 @@ func (suite *SMSTestSuite) TestSMSCreditByEvery8D() {
 	suite.router.ServeHTTP(res, req)
 
 	suite.Equal(http.StatusOK, res.Code, "HTTP 狀態碼應為 200")
-	if res.Code == http.StatusOK {
-		var result *model.Result
-		json.NewDecoder(res.Body).Decode(&result)
 
-		credit := result.Data.(float64)
-		suite.GreaterOrEqual(int(credit), 0, "餘額應大於或等於 0")
-	}
+	var result *model.Result
+	json.NewDecoder(res.Body).Decode(&result)
+
+	credit := result.Data.(float64)
+
+	suite.Equal(result.Status, model.Success, "狀態應為成功")
+	suite.GreaterOrEqual(int(credit), 0, "餘額應大於或等於 0")
 }
 
 func (suite *SMSTestSuite) TestSMSCreditByMitake() {
@@ -51,16 +53,18 @@ func (suite *SMSTestSuite) TestSMSCreditByMitake() {
 	suite.router.ServeHTTP(res, req)
 
 	suite.Equal(http.StatusOK, res.Code, "HTTP 狀態碼應為 200")
-	if res.Code == http.StatusOK {
-		var result *model.Result
-		json.NewDecoder(res.Body).Decode(&result)
 
-		credit := result.Data.(float64)
-		suite.GreaterOrEqual(int(credit), 0, "餘額應大於或等於 0")
-	}
+	var result *model.Result
+	json.NewDecoder(res.Body).Decode(&result)
+
+	credit := result.Data.(float64)
+
+	suite.Equal(result.Status, model.Success, "狀態應為成功")
+	suite.GreaterOrEqual(int(credit), 0, "餘額應大於或等於 0")
 }
 
 func (suite *SMSTestSuite) TestSendSMSByEvery8D() {
+	suite.sms.Message += ", 簡訊服務商: Every8D"
 	b, _ := json.Marshal(suite.sms)
 
 	res := httptest.NewRecorder()
@@ -68,20 +72,31 @@ func (suite *SMSTestSuite) TestSendSMSByEvery8D() {
 	req.Header.Add("Content-Type", "application/json")
 	suite.router.ServeHTTP(res, req)
 
-	suite.Equal(http.StatusOK, res.Code, "HTTP 狀態碼應為 200")
-	if res.Code == http.StatusOK {
-		var result *model.Result
-		var smsResult *model.SMSResult
+	var result *model.Result
+	if suite.sms.Phone != "" {
+		suite.Equal(http.StatusOK, res.Code, "HTTP 狀態碼應為 200")
 
 		json.NewDecoder(res.Body).Decode(&result)
 		jsonStr, _ := json.Marshal(result.Data)
+
+		var smsResult *model.SMSResult
 		json.Unmarshal(jsonStr, &smsResult)
 
+		suite.Equal(result.Status, model.Success, "狀態應為成功")
 		suite.GreaterOrEqual(smsResult.Credit, 0, "餘額應大於或等於 0")
+	} else {
+		suite.Equal(http.StatusUnprocessableEntity, res.Code, "HTTP 狀態碼應為 422")
+
+		json.NewDecoder(res.Body).Decode(&result)
+		err := errors.New(result.Info[0])
+
+		suite.Equal(result.Status, model.Failure, "狀態應為失敗")
+		suite.Error(err, "應該發生格式錯誤")
 	}
 }
 
 func (suite *SMSTestSuite) TestSendSMSByMitake() {
+	suite.sms.Message += ", 簡訊服務商: Mitake"
 	b, _ := json.Marshal(suite.sms)
 
 	res := httptest.NewRecorder()
@@ -89,16 +104,26 @@ func (suite *SMSTestSuite) TestSendSMSByMitake() {
 	req.Header.Add("Content-Type", "application/json")
 	suite.router.ServeHTTP(res, req)
 
-	suite.Equal(http.StatusOK, res.Code, "HTTP 狀態碼應為 200")
-	if res.Code == http.StatusOK {
-		var result *model.Result
-		var smsResult *model.SMSResult
+	var result *model.Result
+	if suite.sms.Phone != "" {
+		suite.Equal(http.StatusOK, res.Code, "HTTP 狀態碼應為 200")
 
 		json.NewDecoder(res.Body).Decode(&result)
 		jsonStr, _ := json.Marshal(result.Data)
+
+		var smsResult *model.SMSResult
 		json.Unmarshal(jsonStr, &smsResult)
 
+		suite.Equal(result.Status, model.Success, "狀態應為成功")
 		suite.GreaterOrEqual(smsResult.Credit, 0, "餘額應大於或等於 0")
+	} else {
+		suite.Equal(http.StatusUnprocessableEntity, res.Code, "HTTP 狀態碼應為 422")
+
+		json.NewDecoder(res.Body).Decode(&result)
+		err := errors.New(result.Info[0])
+
+		suite.Equal(result.Status, model.Failure, "狀態應為失敗")
+		suite.Error(err, "應該發生格式錯誤")
 	}
 }
 
