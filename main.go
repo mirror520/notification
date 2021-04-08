@@ -67,9 +67,11 @@ func SMSCreditHandler(ctx *gin.Context) {
 		return
 	}
 
-	logger = logger.WithFields(log.Fields{
-		"credit": credit,
-	})
+	if gin.Mode() != gin.TestMode {
+		logger = logger.WithFields(log.Fields{
+			"credit": credit,
+		})
+	}
 
 	result := model.NewSuccessResult().SetLogger(logger)
 	result.AddInfo("查詢餘額成功")
