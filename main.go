@@ -2,8 +2,11 @@ package main
 
 import (
 	"net/http"
+	"os"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
+	"github.com/jinzhu/configor"
 	"github.com/mirror520/sms/model"
 	"github.com/mirror520/sms/provider"
 
@@ -18,13 +21,15 @@ func setRouter() *gin.Engine {
 		sms.GET("/status", SMSStatusHandler)
 		sms.GET("/credit/:sms_id", SMSCreditHandler)
 		sms.POST("/:sms_id/send", SendSMSHandler)
-		// sms.POST("/master/send", SendSMSHandler)
 		sms.PATCH("/switch/:sms_id/master", SwitchSMSMasterHandler)
 	}
 	return router
 }
 
 func main() {
+	os.Setenv("CONFIGOR_ENV_PREFIX", "SMS")
+	configor.Load(&model.Config, "config.yaml")
+
 	router := setRouter()
 	router.Run(":7080")
 }
@@ -37,21 +42,15 @@ func SMSCreditHandler(ctx *gin.Context) {
 		"event": "SMSCredit",
 	})
 
-	var providerType provider.SMSProviderType
-	smsID := ctx.Param("sms_id")
-	switch smsID {
-	case "every8d":
-		providerType = provider.Every8D
-
-	case "mitake":
-		providerType = provider.Mitake
-	}
+	id, _ := strconv.Atoi(ctx.Param("sms_id"))
+	p := model.Config.Providers[id]
 
 	logger = logger.WithFields(log.Fields{
-		"provider": smsID,
+		"name":     p.Name,
+		"provider": model.ProviderType[p.Type],
 	})
 
-	smsProvider, err := provider.SMSProviderCreateFactory(providerType)
+	smsProvider, err := provider.SMSProviderCreateFactory(p)
 	if err != nil {
 		result := model.NewFailureResult().SetLogger(logger)
 		result.AddInfo(err.Error())
@@ -67,9 +66,11 @@ func SMSCreditHandler(ctx *gin.Context) {
 		return
 	}
 
-	logger = logger.WithFields(log.Fields{
-		"credit": credit,
-	})
+	if gin.Mode() != gin.TestMode {
+		logger = logger.WithFields(log.Fields{
+			"credit": credit,
+		})
+	}
 
 	result := model.NewSuccessResult().SetLogger(logger)
 	result.AddInfo("查詢餘額成功")
@@ -83,22 +84,12 @@ func SendSMSHandler(ctx *gin.Context) {
 		"event": "SendSMS",
 	})
 
-	var providerType provider.SMSProviderType
-	smsID := ctx.Param("sms_id")
-	switch smsID {
-	case "master":
-		providerType = provider.Every8D
-
-	case "every8d":
-		providerType = provider.Every8D
-
-	case "mitake":
-		providerType = provider.Mitake
-
-	}
+	id, _ := strconv.Atoi(ctx.Param("sms_id"))
+	p := model.Config.Providers[id]
 
 	logger = logger.WithFields(log.Fields{
-		"provider": smsID,
+		"name":     p.Name,
+		"provider": model.ProviderType[p.Type],
 	})
 
 	var sms model.SMS
@@ -109,7 +100,7 @@ func SendSMSHandler(ctx *gin.Context) {
 		return
 	}
 
-	smsProvider, err := provider.SMSProviderCreateFactory(providerType)
+	smsProvider, err := provider.SMSProviderCreateFactory(p)
 	if err != nil {
 		result := model.NewFailureResult().SetLogger(logger)
 		result.AddInfo(err.Error())

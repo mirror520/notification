@@ -13,7 +13,7 @@ import (
 
 type Every8DProvider struct {
 	baseURL string
-	account SMSAccount
+	account model.SMSAccount
 }
 
 func (p *Every8DProvider) SendSMS(sms *model.SMS) (*model.SMSResult, error) {
