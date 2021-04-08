@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/jinzhu/configor"
 	"github.com/mirror520/sms/model"
 	"github.com/stretchr/testify/suite"
 )
@@ -25,6 +26,9 @@ func (suite *SMSTestSuite) SetupTest() {
 	gin.SetMode(gin.TestMode)
 	suite.router = setRouter()
 
+	os.Setenv("CONFIGOR_ENV_PREFIX", "SMS")
+	configor.Load(&model.Config, "config.yaml")
+
 	suite.sms = &model.SMS{
 		Phone:   os.Getenv("SMS_TESTPHONE"),
 		Message: "現在時間: " + time.Now().Format("2006-01-02 15:04:05"),
@@ -33,34 +37,36 @@ func (suite *SMSTestSuite) SetupTest() {
 
 func (suite *SMSTestSuite) TestSMSCreditByEvery8D() {
 	res := httptest.NewRecorder()
-	req, _ := http.NewRequest("GET", "/api/v1/sms/credit/every8d", nil)
+	req, _ := http.NewRequest("GET", "/api/v1/sms/credit/0", nil)
 	suite.router.ServeHTTP(res, req)
 
 	suite.Equal(http.StatusOK, res.Code, "HTTP 狀態碼應為 200")
+	if res.Code == http.StatusOK {
+		var result *model.Result
+		json.NewDecoder(res.Body).Decode(&result)
 
-	var result *model.Result
-	json.NewDecoder(res.Body).Decode(&result)
+		credit := result.Data.(float64)
 
-	credit := result.Data.(float64)
-
-	suite.Equal(result.Status, model.Success, "狀態應為成功")
-	suite.GreaterOrEqual(int(credit), 0, "餘額應大於或等於 0")
+		suite.Equal(result.Status, model.Success, "狀態應為成功")
+		suite.GreaterOrEqual(int(credit), 0, "餘額應大於或等於 0")
+	}
 }
 
 func (suite *SMSTestSuite) TestSMSCreditByMitake() {
 	res := httptest.NewRecorder()
-	req, _ := http.NewRequest("GET", "/api/v1/sms/credit/mitake", nil)
+	req, _ := http.NewRequest("GET", "/api/v1/sms/credit/1", nil)
 	suite.router.ServeHTTP(res, req)
 
 	suite.Equal(http.StatusOK, res.Code, "HTTP 狀態碼應為 200")
+	if res.Code == http.StatusOK {
+		var result *model.Result
+		json.NewDecoder(res.Body).Decode(&result)
 
-	var result *model.Result
-	json.NewDecoder(res.Body).Decode(&result)
+		credit := result.Data.(float64)
 
-	credit := result.Data.(float64)
-
-	suite.Equal(result.Status, model.Success, "狀態應為成功")
-	suite.GreaterOrEqual(int(credit), 0, "餘額應大於或等於 0")
+		suite.Equal(result.Status, model.Success, "狀態應為成功")
+		suite.GreaterOrEqual(int(credit), 0, "餘額應大於或等於 0")
+	}
 }
 
 func (suite *SMSTestSuite) TestSendSMSByEvery8D() {
@@ -68,7 +74,7 @@ func (suite *SMSTestSuite) TestSendSMSByEvery8D() {
 	b, _ := json.Marshal(suite.sms)
 
 	res := httptest.NewRecorder()
-	req, _ := http.NewRequest("POST", `/api/v1/sms/every8d/send`, bytes.NewBuffer(b))
+	req, _ := http.NewRequest("POST", `/api/v1/sms/0/send`, bytes.NewBuffer(b))
 	req.Header.Add("Content-Type", "application/json")
 	suite.router.ServeHTTP(res, req)
 
@@ -100,7 +106,7 @@ func (suite *SMSTestSuite) TestSendSMSByMitake() {
 	b, _ := json.Marshal(suite.sms)
 
 	res := httptest.NewRecorder()
-	req, _ := http.NewRequest("POST", `/api/v1/sms/mitake/send`, bytes.NewBuffer(b))
+	req, _ := http.NewRequest("POST", `/api/v1/sms/1/send`, bytes.NewBuffer(b))
 	req.Header.Add("Content-Type", "application/json")
 	suite.router.ServeHTTP(res, req)
 

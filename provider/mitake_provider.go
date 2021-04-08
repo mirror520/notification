@@ -14,7 +14,7 @@ import (
 
 type MitakeProvider struct {
 	baseURL string
-	account SMSAccount
+	account model.SMSAccount
 }
 
 func (p *MitakeProvider) SendSMS(sms *model.SMS) (*model.SMSResult, error) {
