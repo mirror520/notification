@@ -9,11 +9,30 @@ import (
 
 	"github.com/go-resty/resty/v2"
 	"github.com/mirror520/sms/model"
+
+	log "github.com/sirupsen/logrus"
 )
 
 type Every8DProvider struct {
 	baseURL string
 	account model.SMSAccount
+	credit  int
+}
+
+func (p *Every8DProvider) Init() {
+	logger := log.WithFields(log.Fields{
+		"provider": "Every8DProvider",
+		"method":   "Init",
+	})
+
+	credit, err := p.Credit()
+	if err != nil {
+		logger.Errorln(err.Error())
+	}
+
+	p.credit = credit
+
+	logger.Infoln("初始化完成")
 }
 
 func (p *Every8DProvider) SendSMS(sms *model.SMS) (*model.SMSResult, error) {

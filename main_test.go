@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -11,9 +12,11 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/jinzhu/configor"
 	"github.com/mirror520/sms/model"
+	"github.com/mirror520/sms/provider"
 	"github.com/stretchr/testify/suite"
+
+	"github.com/sirupsen/logrus"
 )
 
 type SMSTestSuite struct {
@@ -22,13 +25,12 @@ type SMSTestSuite struct {
 	sms    *model.SMS
 }
 
-func (suite *SMSTestSuite) SetupTest() {
+func (suite *SMSTestSuite) SetupSuite() {
+	logrus.SetOutput(ioutil.Discard)
 	gin.SetMode(gin.TestMode)
+
+	provider.Init()
 	suite.router = setRouter()
-
-	os.Setenv("CONFIGOR_ENV_PREFIX", "SMS")
-	configor.Load(&model.Config, "config.yaml")
-
 	suite.sms = &model.SMS{
 		Phone:   os.Getenv("SMS_TESTPHONE"),
 		Message: "現在時間: " + time.Now().Format("2006-01-02 15:04:05"),

@@ -2,13 +2,44 @@ package provider
 
 import (
 	"errors"
+	"os"
 
+	"github.com/jinzhu/configor"
 	"github.com/mirror520/sms/model"
+
+	log "github.com/sirupsen/logrus"
 )
 
 type ISMSProvider interface {
+	Init()
 	SendSMS(*model.SMS) (*model.SMSResult, error)
 	Credit() (int, error)
+}
+
+var SMSProviderPool map[string]ISMSProvider
+
+func Init() {
+	logger := log.WithFields(log.Fields{
+		"provider": "ISMSProvider",
+		"method":   "Init",
+	})
+
+	os.Setenv("CONFIGOR_ENV_PREFIX", "SMS")
+	configor.Load(&model.Config, "config.yaml")
+	config := model.Config
+
+	SMSProviderPool = make(map[string]ISMSProvider)
+	for _, p := range config.Providers {
+		pImpl, err := SMSProviderCreateFactory(p)
+		if err != nil {
+			logger.Errorln(err.Error())
+		}
+
+		pImpl.Init()
+		SMSProviderPool[p.Name] = pImpl
+	}
+
+	logger.Infoln("簡訊提供者初始化完成")
 }
 
 func SMSProviderCreateFactory(p model.SMSProvider) (ISMSProvider, error) {

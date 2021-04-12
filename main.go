@@ -2,11 +2,9 @@ package main
 
 import (
 	"net/http"
-	"os"
 	"strconv"
 
 	"github.com/gin-gonic/gin"
-	"github.com/jinzhu/configor"
 	"github.com/mirror520/sms/model"
 	"github.com/mirror520/sms/provider"
 
@@ -27,8 +25,7 @@ func setRouter() *gin.Engine {
 }
 
 func main() {
-	os.Setenv("CONFIGOR_ENV_PREFIX", "SMS")
-	configor.Load(&model.Config, "config.yaml")
+	provider.Init()
 
 	router := setRouter()
 	router.Run(":7080")
@@ -44,13 +41,14 @@ func SMSCreditHandler(ctx *gin.Context) {
 
 	id, _ := strconv.Atoi(ctx.Param("sms_id"))
 	p := model.Config.Providers[id]
+	pImpl := provider.SMSProviderPool[p.Name]
 
 	logger = logger.WithFields(log.Fields{
 		"name":     p.Name,
 		"provider": model.ProviderType[p.Type],
 	})
 
-	smsProvider, err := provider.SMSProviderCreateFactory(p)
+	credit, err := pImpl.Credit()
 	if err != nil {
 		result := model.NewFailureResult().SetLogger(logger)
 		result.AddInfo(err.Error())
@@ -58,19 +56,9 @@ func SMSCreditHandler(ctx *gin.Context) {
 		return
 	}
 
-	credit, err := smsProvider.Credit()
-	if err != nil {
-		result := model.NewFailureResult().SetLogger(logger)
-		result.AddInfo(err.Error())
-		ctx.AbortWithStatusJSON(http.StatusUnprocessableEntity, result)
-		return
-	}
-
-	if gin.Mode() != gin.TestMode {
-		logger = logger.WithFields(log.Fields{
-			"credit": credit,
-		})
-	}
+	logger = logger.WithFields(log.Fields{
+		"credit": credit,
+	})
 
 	result := model.NewSuccessResult().SetLogger(logger)
 	result.AddInfo("查詢餘額成功")
@@ -86,6 +74,7 @@ func SendSMSHandler(ctx *gin.Context) {
 
 	id, _ := strconv.Atoi(ctx.Param("sms_id"))
 	p := model.Config.Providers[id]
+	pImpl := provider.SMSProviderPool[p.Name]
 
 	logger = logger.WithFields(log.Fields{
 		"name":     p.Name,
@@ -100,21 +89,11 @@ func SendSMSHandler(ctx *gin.Context) {
 		return
 	}
 
-	smsProvider, err := provider.SMSProviderCreateFactory(p)
-	if err != nil {
-		result := model.NewFailureResult().SetLogger(logger)
-		result.AddInfo(err.Error())
-		ctx.AbortWithStatusJSON(http.StatusUnprocessableEntity, result)
-		return
-	}
+	logger = logger.WithFields(log.Fields{
+		"phone": sms.Phone,
+	})
 
-	if gin.Mode() != gin.TestMode {
-		logger = logger.WithFields(log.Fields{
-			"phone": sms.Phone,
-		})
-	}
-
-	smsResult, err := smsProvider.SendSMS(&sms)
+	smsResult, err := pImpl.SendSMS(&sms)
 	if err != nil {
 		result := model.NewFailureResult().SetLogger(logger)
 		result.AddInfo(err.Error())
