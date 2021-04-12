@@ -16,13 +16,13 @@ import (
 
 type MitakeProvider struct {
 	baseURL string
-	account model.SMSAccount
+	profile *model.SMSProviderProfile
 	credit  int
 }
 
 func (p *MitakeProvider) Init() {
 	logger := log.WithFields(log.Fields{
-		"provider": "Every8DProvider",
+		"provider": "MitakeProvider",
 		"method":   "Init",
 	})
 
@@ -32,7 +32,6 @@ func (p *MitakeProvider) Init() {
 	}
 
 	p.credit = credit
-
 	logger.Infoln("初始化完成")
 }
 
@@ -106,10 +105,14 @@ func (p *MitakeProvider) Credit() (int, error) {
 	return credit, nil
 }
 
+func (p *MitakeProvider) Profile() *model.SMSProviderProfile {
+	return p.profile
+}
+
 func (p *MitakeProvider) Account() map[string]string {
 	return map[string]string{
-		"username": p.account.Username,
-		"password": p.account.Password,
+		"username": p.Profile().Account.Username,
+		"password": p.Profile().Account.Password,
 	}
 }
 

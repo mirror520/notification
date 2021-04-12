@@ -2,7 +2,6 @@ package main
 
 import (
 	"net/http"
-	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"github.com/mirror520/sms/model"
@@ -17,9 +16,9 @@ func setRouter() *gin.Engine {
 	sms := router.Group("/api/v1/sms")
 	{
 		sms.GET("/status", SMSStatusHandler)
-		sms.GET("/credit/:sms_id", SMSCreditHandler)
-		sms.POST("/:sms_id/send", SendSMSHandler)
-		sms.PATCH("/switch/:sms_id/master", SwitchSMSMasterHandler)
+		sms.GET("/credit/:id", SMSCreditHandler)
+		sms.POST("/:id/send", SendSMSHandler)
+		sms.PATCH("/switch/:id/master", SwitchSMSMasterHandler)
 	}
 	return router
 }
@@ -39,16 +38,15 @@ func SMSCreditHandler(ctx *gin.Context) {
 		"event": "SMSCredit",
 	})
 
-	id, _ := strconv.Atoi(ctx.Param("sms_id"))
-	p := model.Config.Providers[id]
-	pImpl := provider.SMSProviderPool[p.Name]
+	id := ctx.Param("id")
+	p := provider.SMSProviderPool[id]
 
 	logger = logger.WithFields(log.Fields{
-		"name":     p.Name,
-		"provider": model.ProviderType[p.Type],
+		"id":       id,
+		"provider": p.Profile().ProviderType(),
 	})
 
-	credit, err := pImpl.Credit()
+	credit, err := p.Credit()
 	if err != nil {
 		result := model.NewFailureResult().SetLogger(logger)
 		result.AddInfo(err.Error())
@@ -72,13 +70,12 @@ func SendSMSHandler(ctx *gin.Context) {
 		"event": "SendSMS",
 	})
 
-	id, _ := strconv.Atoi(ctx.Param("sms_id"))
-	p := model.Config.Providers[id]
-	pImpl := provider.SMSProviderPool[p.Name]
+	id := ctx.Param("id")
+	p := provider.SMSProviderPool[id]
 
 	logger = logger.WithFields(log.Fields{
-		"name":     p.Name,
-		"provider": model.ProviderType[p.Type],
+		"id":       id,
+		"provider": p.Profile().ProviderType(),
 	})
 
 	var sms model.SMS
@@ -93,7 +90,7 @@ func SendSMSHandler(ctx *gin.Context) {
 		"phone": sms.Phone,
 	})
 
-	smsResult, err := pImpl.SendSMS(&sms)
+	smsResult, err := p.SendSMS(&sms)
 	if err != nil {
 		result := model.NewFailureResult().SetLogger(logger)
 		result.AddInfo(err.Error())

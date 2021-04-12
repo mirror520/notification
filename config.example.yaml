@@ -5,13 +5,13 @@ mitake:
   baseurl: https://smsapi.mitake.com.tw/api/mtk
 
 providers:
-- name: my_every8d
+- id: every8d
   type: 0 # 0: Every8D; 1: Mitake
   role: 1 # 1: Master;  0: Backup
   account: 
     username: username
     password: password
-- name: my_mitake
+- id: mitake
   type: 1
   role: 0
   account: 
@@ -22,12 +22,12 @@ providers:
 # Mapping Environment Variables
 # SMS_EVERY8D_BASEURL
 # SMS_MITAKE_BASEURL
-# SMS_PROVIDERS_0_NAME
+# SMS_PROVIDERS_0_ID
 # SMS_PROVIDERS_0_TYPE
 # SMS_PROVIDERS_0_ROLE
 # SMS_PROVIDERS_0_ACCOUNT_USERNAME
 # SMS_PROVIDERS_0_ACCOUNT_PASSWORD
-# SMS_PROVIDERS_1_NAME
+# SMS_PROVIDERS_1_ID
 # SMS_PROVIDERS_1_TYPE
 # SMS_PROVIDERS_1_ROLE
 # SMS_PROVIDERS_1_ACCOUNT_USERNAME

@@ -39,7 +39,7 @@ func (suite *SMSTestSuite) SetupSuite() {
 
 func (suite *SMSTestSuite) TestSMSCreditByEvery8D() {
 	res := httptest.NewRecorder()
-	req, _ := http.NewRequest("GET", "/api/v1/sms/credit/0", nil)
+	req, _ := http.NewRequest("GET", "/api/v1/sms/credit/every8d", nil)
 	suite.router.ServeHTTP(res, req)
 
 	suite.Equal(http.StatusOK, res.Code, "HTTP 狀態碼應為 200")
@@ -56,7 +56,7 @@ func (suite *SMSTestSuite) TestSMSCreditByEvery8D() {
 
 func (suite *SMSTestSuite) TestSMSCreditByMitake() {
 	res := httptest.NewRecorder()
-	req, _ := http.NewRequest("GET", "/api/v1/sms/credit/1", nil)
+	req, _ := http.NewRequest("GET", "/api/v1/sms/credit/mitake", nil)
 	suite.router.ServeHTTP(res, req)
 
 	suite.Equal(http.StatusOK, res.Code, "HTTP 狀態碼應為 200")
@@ -76,7 +76,7 @@ func (suite *SMSTestSuite) TestSendSMSByEvery8D() {
 	b, _ := json.Marshal(suite.sms)
 
 	res := httptest.NewRecorder()
-	req, _ := http.NewRequest("POST", `/api/v1/sms/0/send`, bytes.NewBuffer(b))
+	req, _ := http.NewRequest("POST", `/api/v1/sms/every8d/send`, bytes.NewBuffer(b))
 	req.Header.Add("Content-Type", "application/json")
 	suite.router.ServeHTTP(res, req)
 
@@ -108,7 +108,7 @@ func (suite *SMSTestSuite) TestSendSMSByMitake() {
 	b, _ := json.Marshal(suite.sms)
 
 	res := httptest.NewRecorder()
-	req, _ := http.NewRequest("POST", `/api/v1/sms/1/send`, bytes.NewBuffer(b))
+	req, _ := http.NewRequest("POST", `/api/v1/sms/mitake/send`, bytes.NewBuffer(b))
 	req.Header.Add("Content-Type", "application/json")
 	suite.router.ServeHTTP(res, req)
 

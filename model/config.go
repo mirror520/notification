@@ -9,5 +9,5 @@ var Config = struct {
 		BaseURL string
 	}
 
-	Providers []SMSProvider
+	Providers []SMSProviderProfile
 }{}
