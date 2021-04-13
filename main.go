@@ -16,9 +16,10 @@ func setRouter() *gin.Engine {
 	sms := router.Group("/api/v1/sms")
 	{
 		sms.GET("/status", SMSStatusHandler)
-		sms.GET("/credit/:id", SMSCreditHandler)
-		sms.POST("/:id/send", SendSMSHandler)
-		sms.PATCH("/switch/:id/master", SwitchSMSMasterHandler)
+		sms.GET("/credit/:pid", SMSCreditHandler)
+		sms.POST("/send", SendSMSHandler)
+		sms.POST("/send/:pid", SendSMSHandler)
+		sms.PATCH("/switch/:pid/master", SwitchSMSMasterHandler)
 	}
 	return router
 }
@@ -38,11 +39,17 @@ func SMSCreditHandler(ctx *gin.Context) {
 		"event": "SMSCredit",
 	})
 
-	id := ctx.Param("id")
-	p := provider.SMSProviderPool[id]
+	pid := ctx.Param("pid")
+	p, err := provider.SMSProvider(pid)
+	if err != nil {
+		result := model.NewFailureResult().SetLogger(logger)
+		result.AddInfo(err.Error())
+		ctx.AbortWithStatusJSON(http.StatusUnprocessableEntity, result)
+		return
+	}
 
 	logger = logger.WithFields(log.Fields{
-		"id":       id,
+		"pid":      pid,
 		"provider": p.Profile().ProviderType(),
 	})
 
@@ -70,11 +77,25 @@ func SendSMSHandler(ctx *gin.Context) {
 		"event": "SendSMS",
 	})
 
-	id := ctx.Param("id")
-	p := provider.SMSProviderPool[id]
+	pid := ctx.Param("pid")
+	p, err := provider.SMSProvider(pid)
+
+	// GET /api/v1/sms/send (master)
+	if pid == "" {
+		p = provider.SMSMasterProvider()
+		pid = p.Profile().ID
+	}
+
+	// GET /api/v1/sms/send/:pid
+	if err != nil && p == nil {
+		result := model.NewFailureResult().SetLogger(logger)
+		result.AddInfo(err.Error())
+		ctx.AbortWithStatusJSON(http.StatusUnprocessableEntity, result)
+		return
+	}
 
 	logger = logger.WithFields(log.Fields{
-		"id":       id,
+		"pid":      pid,
 		"provider": p.Profile().ProviderType(),
 	})
 
@@ -106,4 +127,23 @@ func SendSMSHandler(ctx *gin.Context) {
 }
 
 func SwitchSMSMasterHandler(ctx *gin.Context) {
+	logger := log.WithFields(log.Fields{
+		"event": "SwitchSMSMaster",
+	})
+
+	pid := ctx.Param("pid")
+	p, err := provider.SMSProvider(pid)
+	if err != nil {
+		result := model.NewFailureResult().SetLogger(logger)
+		result.AddInfo(err.Error())
+		ctx.AbortWithStatusJSON(http.StatusUnprocessableEntity, result)
+		return
+	}
+
+	provider.SwitchSMSProviderToMaster(p)
+
+	result := model.NewSuccessResult().SetLogger(logger)
+	result.AddInfo("切換主要簡訊提供商成功")
+
+	ctx.JSON(http.StatusOK, result)
 }

@@ -17,7 +17,10 @@ type ISMSProvider interface {
 	Credit() (int, error)
 }
 
-var SMSProviderPool map[string]ISMSProvider
+var (
+	providerPool   map[string]ISMSProvider
+	masterProvider ISMSProvider
+)
 
 func Init() {
 	logger := log.WithFields(log.Fields{
@@ -29,16 +32,19 @@ func Init() {
 	configor.Load(&model.Config, "config.yaml")
 	config := model.Config
 
-	SMSProviderPool = make(map[string]ISMSProvider)
+	providerPool = make(map[string]ISMSProvider)
 	for _, profile := range config.Providers {
 		p, err := SMSProviderCreateFactory(profile)
 		if err != nil {
 			logger.Errorln(err.Error())
 		}
 
-		p.Init()
-		SMSProviderPool[profile.ID] = p
+		if profile.Role == model.Master {
+			masterProvider = p
+		}
 
+		p.Init()
+		providerPool[profile.ID] = p
 	}
 
 	logger.Infoln("簡訊提供者初始化完成")
@@ -59,5 +65,31 @@ func SMSProviderCreateFactory(profile model.SMSProviderProfile) (ISMSProvider, e
 		}, nil
 	}
 
-	return nil, errors.New("無法提供此簡訊供應商")
+	return nil, errors.New("無法產生此簡訊提供商")
+}
+
+func SwitchSMSProviderToMaster(master ISMSProvider) {
+	masterProvider = master
+
+	for _, p := range providerPool {
+		if p.Profile().ID == master.Profile().ID {
+			p.Profile().Role = model.Master
+		} else {
+			p.Profile().Role = model.Backup
+		}
+	}
+}
+
+func SMSProvider(pid string) (ISMSProvider, error) {
+	p, ok := providerPool[pid]
+
+	if !ok {
+		return nil, errors.New("無此簡訊提供商")
+	}
+
+	return p, nil
+}
+
+func SMSMasterProvider() ISMSProvider {
+	return masterProvider
 }
