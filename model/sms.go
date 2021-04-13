@@ -19,7 +19,7 @@ const (
 	Master
 )
 
-var Role = map[SMSRole]string{
+var ProviderRole = map[SMSRole]string{
 	Backup: "backup",
 	Master: "master",
 }
@@ -29,11 +29,19 @@ type SMSAccount struct {
 	Password string
 }
 
-type SMSProvider struct {
-	Name    string
+type SMSProviderProfile struct {
+	ID      string
 	Type    SMSProviderType
 	Role    SMSRole
 	Account SMSAccount
+}
+
+func (p *SMSProviderProfile) ProviderType() string {
+	return ProviderType[p.Type]
+}
+
+func (p *SMSProviderProfile) ProviderRole() string {
+	return ProviderRole[p.Role]
 }
 
 type SMS struct {
