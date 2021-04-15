@@ -29,7 +29,7 @@ func (suite *SMSCreditTestSuite) SetupSuite() {
 	gin.SetMode(gin.TestMode)
 
 	provider.Init()
-	suite.router = setRouter()
+	suite.router = internalRouter()
 }
 
 func (suite *SMSCreditTestSuite) TestSMSCreditByEvery8D() {
@@ -70,7 +70,7 @@ func (suite *SMSSendTestSuite) SetupSuite() {
 	gin.SetMode(gin.TestMode)
 
 	provider.Init()
-	suite.router = setRouter()
+	suite.router = internalRouter()
 	suite.sms = model.SMS{
 		Phone:   os.Getenv("SMS_TESTPHONE"),
 		Message: "現在時間: " + time.Now().Format("2006-01-02 15:04:05"),
@@ -144,7 +144,7 @@ func (suite *SMSSwitchMasterTestSuite) SetupSuite() {
 	gin.SetMode(gin.TestMode)
 
 	provider.Init()
-	suite.router = setRouter()
+	suite.router = internalRouter()
 }
 
 func (suite *SMSSwitchMasterTestSuite) TestSMSSwitchMaster() {

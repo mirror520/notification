@@ -4,9 +4,12 @@ import (
 	"bufio"
 	"bytes"
 	"errors"
+	"fmt"
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/go-resty/resty/v2"
 	"github.com/mirror520/sms/model"
@@ -15,9 +18,10 @@ import (
 )
 
 type MitakeProvider struct {
-	baseURL string
-	profile *model.SMSProviderProfile
-	credit  int
+	baseURL     string
+	callbackURL string
+	profile     *model.SMSProviderProfile
+	credit      int
 }
 
 func (p *MitakeProvider) Init() {
@@ -105,6 +109,18 @@ func (p *MitakeProvider) Credit() (int, error) {
 	return credit, nil
 }
 
+func (p *MitakeProvider) Callback(query *url.Values) (string, string) {
+	msgid := query.Get("msgid")
+	phone := query.Get("dstaddr")
+
+	sendTime, _ := time.ParseInLocation(timeLayout, query.Get("dlvtime"), timeLocation)
+	receiveTime, _ := time.ParseInLocation(timeLayout, query.Get("donetime"), timeLocation)
+	fmt.Printf("[Diff: %s, Send time: %s, Receive Time: %s]\n", receiveTime.Sub(sendTime), sendTime, receiveTime)
+
+	response := fmt.Sprintf("magicid=sms_gateway_rpack\nmsgid=%s\n", msgid)
+	return phone, response
+}
+
 func (p *MitakeProvider) Profile() *model.SMSProviderProfile {
 	return p.profile
 }
@@ -121,5 +137,6 @@ func (p *MitakeProvider) AccountWithSMS(sms *model.SMS) map[string]string {
 	account["dstaddr"] = sms.Phone
 	account["smbody"] = sms.Message
 	account["destname"] = sms.Comment
+	account["response"] = p.callbackURL
 	return account
 }

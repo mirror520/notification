@@ -4,8 +4,10 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/go-resty/resty/v2"
 	"github.com/mirror520/sms/model"
@@ -31,6 +33,7 @@ func (p *Every8DProvider) Init() {
 	}
 
 	p.credit = credit
+
 	logger.Infoln("初始化完成")
 }
 
@@ -88,6 +91,18 @@ func (p *Every8DProvider) Credit() (int, error) {
 	}
 
 	return credit, nil
+}
+
+func (p *Every8DProvider) Callback(query *url.Values) (string, string) {
+	phone := query.Get("RM")
+	status := query.Get("STATUS")
+	if status == "100" {
+		sendTime, _ := time.ParseInLocation(timeLayout, query.Get("ST"), timeLocation)
+		receiveTime, _ := time.ParseInLocation(timeLayout, query.Get("RT"), timeLocation)
+		fmt.Printf("Diff: %s, Send time: %s, Receive Time: %s\n", receiveTime.Sub(sendTime), sendTime, receiveTime)
+	}
+
+	return phone, "ok"
 }
 
 func (p *Every8DProvider) Profile() *model.SMSProviderProfile {

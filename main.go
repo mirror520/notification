@@ -10,7 +10,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func setRouter() *gin.Engine {
+func internalRouter() *gin.Engine {
 	router := gin.Default()
 
 	sms := router.Group("/api/v1/sms")
@@ -24,11 +24,22 @@ func setRouter() *gin.Engine {
 	return router
 }
 
+func externalRouter() *gin.Engine {
+	router := gin.Default()
+
+	sms := router.Group("/api/v1/sms")
+	{
+		sms.GET("/status/:pid/callback", SMSStatusCallbackHandler)
+	}
+
+	return router
+}
+
 func main() {
 	provider.Init()
 
-	router := setRouter()
-	router.Run(":7080")
+	go internalRouter().Run(":7080")
+	externalRouter().Run(":7090")
 }
 
 func SMSStatusHandler(ctx *gin.Context) {
@@ -146,4 +157,31 @@ func SwitchSMSMasterHandler(ctx *gin.Context) {
 	result.AddInfo("切換主要簡訊提供商成功")
 
 	ctx.JSON(http.StatusOK, result)
+}
+
+func SMSStatusCallbackHandler(ctx *gin.Context) {
+	logger := log.WithFields(log.Fields{
+		"event": "SMSStatusCallback",
+	})
+
+	pid := ctx.Param("pid")
+	p, err := provider.SMSProvider(pid)
+	if err != nil {
+		result := model.NewFailureResult().SetLogger(logger)
+		result.AddInfo(err.Error())
+		ctx.AbortWithStatusJSON(http.StatusUnprocessableEntity, result)
+		return
+	}
+
+	queryParams := ctx.Request.URL.Query()
+	phone, response := p.Callback(&queryParams)
+
+	logger = logger.WithFields(log.Fields{
+		"pid":      pid,
+		"provider": p.Profile().ProviderType(),
+		"phone":    phone,
+	})
+
+	logger.Infoln("成功接收簡訊狀態")
+	ctx.String(http.StatusOK, response)
 }

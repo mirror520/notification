@@ -2,7 +2,9 @@ package provider
 
 import (
 	"errors"
+	"net/url"
 	"os"
+	"time"
 
 	"github.com/jinzhu/configor"
 	"github.com/mirror520/sms/model"
@@ -15,11 +17,15 @@ type ISMSProvider interface {
 	Profile() *model.SMSProviderProfile
 	SendSMS(*model.SMS) (*model.SMSResult, error)
 	Credit() (int, error)
+	Callback(*url.Values) (string, string)
 }
 
 var (
 	providerPool   map[string]ISMSProvider
 	masterProvider ISMSProvider
+
+	timeLayout   string
+	timeLocation *time.Location
 )
 
 func Init() {
@@ -27,6 +33,9 @@ func Init() {
 		"provider": "ISMSProvider",
 		"method":   "Init",
 	})
+
+	timeLayout = "20060102150405"
+	timeLocation, _ = time.LoadLocation("Asia/Taipei")
 
 	os.Setenv("CONFIGOR_ENV_PREFIX", "SMS")
 	configor.Load(&model.Config, "config.yaml")
@@ -60,8 +69,9 @@ func SMSProviderCreateFactory(profile model.SMSProviderProfile) (ISMSProvider, e
 
 	case model.Mitake:
 		return &MitakeProvider{
-			baseURL: model.Config.Mitake.BaseURL,
-			profile: &profile,
+			baseURL:     model.Config.Mitake.BaseURL,
+			callbackURL: model.Config.Mitake.CallbackURL,
+			profile:     &profile,
 		}, nil
 	}
 
