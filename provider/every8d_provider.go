@@ -93,16 +93,22 @@ func (p *Every8DProvider) Credit() (int, error) {
 	return credit, nil
 }
 
-func (p *Every8DProvider) Callback(query *url.Values) (string, string) {
+func (p *Every8DProvider) Callback(query *url.Values) (string, string, error) {
+	mid := query.Get("BatchID")
 	phone := query.Get("RM")
 	status := query.Get("STATUS")
-	if status == "100" {
-		sendTime, _ := time.ParseInLocation(timeLayout, query.Get("ST"), timeLocation)
-		receiveTime, _ := time.ParseInLocation(timeLayout, query.Get("RT"), timeLocation)
-		fmt.Printf("Diff: %s, Send time: %s, Receive Time: %s\n", receiveTime.Sub(sendTime), sendTime, receiveTime)
+
+	if mid == "" {
+		return "", "", errors.New("不合法的輸入參數")
 	}
 
-	return phone, "ok"
+	sendTime, _ := time.ParseInLocation(timeLayout, query.Get("ST"), timeLocation)
+	receiveTime, _ := time.ParseInLocation(timeLayout, query.Get("RT"), timeLocation)
+	delayTime := receiveTime.Sub(sendTime).Seconds()
+
+	NewSMSStatusToTSDB(p.Profile().ID, status, delayTime, sendTime)
+
+	return phone, "ok", nil
 }
 
 func (p *Every8DProvider) Profile() *model.SMSProviderProfile {

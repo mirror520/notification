@@ -9,6 +9,7 @@ import (
 	"github.com/jinzhu/configor"
 	"github.com/mirror520/sms/model"
 
+	influxdb "github.com/influxdata/influxdb-client-go/v2"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -17,8 +18,10 @@ type ISMSProvider interface {
 	Profile() *model.SMSProviderProfile
 	SendSMS(*model.SMS) (*model.SMSResult, error)
 	Credit() (int, error)
-	Callback(*url.Values) (string, string)
+	Callback(*url.Values) (string, string, error)
 }
+
+var InfluxDB influxdb.Client
 
 var (
 	providerPool   map[string]ISMSProvider
@@ -88,6 +91,20 @@ func SwitchSMSProviderToMaster(master ISMSProvider) {
 			p.Profile().Role = model.Backup
 		}
 	}
+}
+
+func NewSMSStatusToTSDB(pid, status string, delay float64, sendTime time.Time) {
+	config := model.Config
+	writeAPI := InfluxDB.WriteAPI(config.InfluxDB.Org, config.InfluxDB.Bucket)
+
+	p := influxdb.NewPointWithMeasurement("send_status").
+		AddTag("pid", pid).
+		AddTag("status", status).
+		AddField("delay", delay).
+		SetTime(sendTime)
+
+	writeAPI.WritePoint(p)
+	writeAPI.Flush()
 }
 
 func SMSProvider(pid string) (ISMSProvider, error) {

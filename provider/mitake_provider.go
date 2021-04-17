@@ -109,16 +109,24 @@ func (p *MitakeProvider) Credit() (int, error) {
 	return credit, nil
 }
 
-func (p *MitakeProvider) Callback(query *url.Values) (string, string) {
-	msgid := query.Get("msgid")
+func (p *MitakeProvider) Callback(query *url.Values) (string, string, error) {
+	mid := query.Get("msgid")
 	phone := query.Get("dstaddr")
+	phone = strings.Replace(phone, "09", "+8869", 1)
+	status := query.Get("statusstr")
+
+	if mid == "" {
+		return "", "", errors.New("不合法的輸入參數")
+	}
 
 	sendTime, _ := time.ParseInLocation(timeLayout, query.Get("dlvtime"), timeLocation)
 	receiveTime, _ := time.ParseInLocation(timeLayout, query.Get("donetime"), timeLocation)
-	fmt.Printf("[Diff: %s, Send time: %s, Receive Time: %s]\n", receiveTime.Sub(sendTime), sendTime, receiveTime)
+	delayTime := receiveTime.Sub(sendTime).Seconds()
 
-	response := fmt.Sprintf("magicid=sms_gateway_rpack\nmsgid=%s\n", msgid)
-	return phone, response
+	NewSMSStatusToTSDB(p.Profile().ID, status, delayTime, sendTime)
+
+	response := fmt.Sprintf("magicid=sms_gateway_rpack\nmsgid=%s\n", mid)
+	return phone, response, nil
 }
 
 func (p *MitakeProvider) Profile() *model.SMSProviderProfile {

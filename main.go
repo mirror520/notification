@@ -1,12 +1,18 @@
 package main
 
 import (
+	"context"
 	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/mirror520/sms/model"
 	"github.com/mirror520/sms/provider"
 
+	influxdb "github.com/influxdata/influxdb-client-go/v2"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -35,11 +41,62 @@ func externalRouter() *gin.Engine {
 	return router
 }
 
+func connInfluxDB() influxdb.Client {
+	config := model.Config
+	client := influxdb.NewClient(config.InfluxDB.URL, config.InfluxDB.Token)
+	check, _ := client.Health(context.Background())
+	log.Println("InfluxDB version: " + *check.Version)
+
+	return client
+}
+
 func main() {
 	provider.Init()
 
-	go internalRouter().Run(":7080")
-	externalRouter().Run(":7090")
+	provider.InfluxDB = connInfluxDB()
+	defer provider.InfluxDB.Close()
+
+	internalSrv := &http.Server{
+		Addr:    ":7080",
+		Handler: internalRouter(),
+	}
+	go func() {
+		if err := internalSrv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Fatalf("listen: %s\n", err)
+		}
+	}()
+
+	externalSrv := &http.Server{
+		Addr:    ":7090",
+		Handler: externalRouter(),
+	}
+	go func() {
+		if err := externalSrv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Fatalf("listen: %s\n", err)
+		}
+	}()
+
+	gracefulShutdown(internalSrv, externalSrv)
+}
+
+func gracefulShutdown(servers ...*http.Server) {
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+	<-quit
+	log.Println("Shutdown Server ...")
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	for _, srv := range servers {
+		if err := srv.Shutdown(ctx); err != nil {
+			log.Fatal("Server Shutdown:", err)
+		}
+	}
+
+	<-ctx.Done()
+	log.Println("Timeout of 5 seconds.")
+	log.Println("Server exiting")
 }
 
 func SMSStatusHandler(ctx *gin.Context) {
@@ -174,7 +231,13 @@ func SMSStatusCallbackHandler(ctx *gin.Context) {
 	}
 
 	queryParams := ctx.Request.URL.Query()
-	phone, response := p.Callback(&queryParams)
+	phone, response, err := p.Callback(&queryParams)
+	if err != nil {
+		result := model.NewFailureResult().SetLogger(logger)
+		result.AddInfo(err.Error())
+		ctx.AbortWithStatusJSON(http.StatusUnprocessableEntity, result)
+		return
+	}
 
 	logger = logger.WithFields(log.Fields{
 		"pid":      pid,
