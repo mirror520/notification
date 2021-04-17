@@ -42,3 +42,50 @@ steps:
 volumes:
 - name: deps
   temp: {}
+
+trigger:
+  event:
+  - push
+  - pull_request
+
+---
+kind: pipeline
+type: docker
+name: deploy-staging
+
+steps:
+- name: release
+  image: plugins/docker
+  settings:
+    repo: tccgov.azurecr.io/tiwengo
+    tags:
+    - ${DOCKER_TAG}
+    registry: tccgov.azurecr.io
+    username: tccgov
+    password: 
+      from_secret: DOCKER_PASSWORD
+
+- name: deploy
+  image: appleboy/drone-ssh
+  volumes:
+  - name: ssh_key
+    path: /root/.ssh
+  settings:
+    host: 10.78.0.1
+    username: ar0660
+    key_path: /root/.ssh/id_rsa
+    script:
+    - cd /home/ar0660/workspace
+    - sudo docker-compose down
+    - sudo docker-compose up -d
+
+volumes:
+- name: ssh_key
+  host:
+    path: /home/ar0660/.ssh
+
+trigger:
+  event:
+  - promote
+  target:
+  - staging
