@@ -57,7 +57,7 @@ steps:
 - name: release
   image: plugins/docker
   settings:
-    repo: tccgov.azurecr.io/tiwengo
+    repo: tccgov.azurecr.io/sms
     tags:
     - ${DOCKER_TAG}
     registry: tccgov.azurecr.io
