@@ -13,6 +13,7 @@ import (
 	"github.com/mirror520/sms/provider"
 
 	influxdb "github.com/influxdata/influxdb-client-go/v2"
+	cors "github.com/rs/cors/wrapper/gin"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -27,6 +28,8 @@ func internalRouter() *gin.Engine {
 		sms.POST("/send/:pid", SendSMSHandler)
 		sms.PATCH("/switch/:pid/master", SwitchSMSMasterHandler)
 	}
+
+	router.Use(cors.AllowAll())
 	return router
 }
 
@@ -38,6 +41,7 @@ func externalRouter() *gin.Engine {
 		sms.GET("/status/:pid/callback", SMSStatusCallbackHandler)
 	}
 
+	router.Use(cors.AllowAll())
 	return router
 }
 
