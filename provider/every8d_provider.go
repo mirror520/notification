@@ -66,11 +66,12 @@ func (p *Every8DProvider) SendSMS(sms *model.SMS) (*model.SMSResult, error) {
 		Credit: int(credit),
 	}
 
-	defer NewSendSMSToTSDB(
+	NewSendSMSToTSDB(
 		p.Profile().ID, p.Profile().ProviderRole(),
 		sms.Phone, result.Credit,
 		resp.Time(),
 	)
+
 	return result, nil
 }
 

@@ -78,11 +78,12 @@ func (p *MitakeProvider) SendSMS(sms *model.SMS) (*model.SMSResult, error) {
 		}
 	}
 
-	defer NewSendSMSToTSDB(
+	NewSendSMSToTSDB(
 		p.Profile().ID, p.Profile().ProviderRole(),
 		sms.Phone, result.Credit,
 		resp.Time(),
 	)
+
 	return result, nil
 }
 
