@@ -78,6 +78,11 @@ func (p *MitakeProvider) SendSMS(sms *model.SMS) (*model.SMSResult, error) {
 		}
 	}
 
+	defer NewSendSMSToTSDB(
+		p.Profile().ID, p.Profile().ProviderRole(),
+		sms.Phone, result.Credit,
+		resp.Time(),
+	)
 	return result, nil
 }
 
@@ -121,7 +126,7 @@ func (p *MitakeProvider) Callback(query *url.Values) (string, string, error) {
 
 	sendTime, _ := time.ParseInLocation(timeLayout, query.Get("dlvtime"), timeLocation)
 	receiveTime, _ := time.ParseInLocation(timeLayout, query.Get("donetime"), timeLocation)
-	delayTime := receiveTime.Sub(sendTime).Seconds()
+	delayTime := receiveTime.Sub(sendTime)
 
 	NewSMSStatusToTSDB(p.Profile().ID, status, delayTime, sendTime)
 
