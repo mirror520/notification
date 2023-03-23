@@ -12,7 +12,7 @@ import (
 	"time"
 
 	"github.com/go-resty/resty/v2"
-	"github.com/mirror520/sms/model"
+	"github.com/mirror520/notification/model"
 
 	log "github.com/sirupsen/logrus"
 )

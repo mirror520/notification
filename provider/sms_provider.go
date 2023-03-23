@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/jinzhu/configor"
-	"github.com/mirror520/sms/model"
+	"github.com/mirror520/notification/model"
 
 	influxdb "github.com/influxdata/influxdb-client-go/v2"
 	log "github.com/sirupsen/logrus"

@@ -13,8 +13,8 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/mirror520/sms/model"
-	"github.com/mirror520/sms/provider"
+	"github.com/mirror520/notification/model"
+	"github.com/mirror520/notification/provider"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/suite"
 )

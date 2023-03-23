@@ -9,8 +9,8 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/mirror520/sms/model"
-	"github.com/mirror520/sms/provider"
+	"github.com/mirror520/notification/model"
+	"github.com/mirror520/notification/provider"
 
 	influxdb "github.com/influxdata/influxdb-client-go/v2"
 	cors "github.com/rs/cors/wrapper/gin"
