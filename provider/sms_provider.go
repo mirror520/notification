@@ -93,15 +93,31 @@ func SwitchSMSProviderToMaster(master ISMSProvider) {
 	}
 }
 
-func NewSMSStatusToTSDB(pid, status string, delay float64, sendTime time.Time) {
+func NewSMSStatusToTSDB(pid, status string, delay time.Duration, sendTime time.Time) {
 	config := model.Config
 	writeAPI := InfluxDB.WriteAPI(config.InfluxDB.Org, config.InfluxDB.Bucket)
 
-	p := influxdb.NewPointWithMeasurement("send_status").
+	p := influxdb.NewPointWithMeasurement("sms_status").
 		AddTag("pid", pid).
 		AddTag("status", status).
 		AddField("delay", delay).
 		SetTime(sendTime)
+
+	writeAPI.WritePoint(p)
+	writeAPI.Flush()
+}
+
+func NewSendSMSToTSDB(pid, role, phone string, credit int, connTime time.Duration) {
+	config := model.Config
+	writeAPI := InfluxDB.WriteAPI(config.InfluxDB.Org, config.InfluxDB.Bucket)
+
+	p := influxdb.NewPointWithMeasurement("send_sms").
+		AddTag("pid", pid).
+		AddTag("role", role).
+		AddField("phone", phone).
+		AddField("credit", credit).
+		AddField("conn", connTime).
+		SetTime(time.Now())
 
 	writeAPI.WritePoint(p)
 	writeAPI.Flush()

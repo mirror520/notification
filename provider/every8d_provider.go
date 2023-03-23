@@ -2,7 +2,6 @@ package provider
 
 import (
 	"errors"
-	"fmt"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -54,7 +53,7 @@ func (p *Every8DProvider) SendSMS(sms *model.SMS) (*model.SMSResult, error) {
 
 	credit, _ := strconv.ParseFloat(contents[0], 64)
 	if err != nil {
-		fmt.Println(err.Error())
+		return nil, err
 	}
 
 	if credit < 0 {
@@ -66,6 +65,12 @@ func (p *Every8DProvider) SendSMS(sms *model.SMS) (*model.SMSResult, error) {
 		ID:     batchID,
 		Credit: int(credit),
 	}
+
+	NewSendSMSToTSDB(
+		p.Profile().ID, p.Profile().ProviderRole(),
+		sms.Phone, result.Credit,
+		resp.Time(),
+	)
 
 	return result, nil
 }
@@ -104,7 +109,7 @@ func (p *Every8DProvider) Callback(query *url.Values) (string, string, error) {
 
 	sendTime, _ := time.ParseInLocation(timeLayout, query.Get("ST"), timeLocation)
 	receiveTime, _ := time.ParseInLocation(timeLayout, query.Get("RT"), timeLocation)
-	delayTime := receiveTime.Sub(sendTime).Seconds()
+	delayTime := receiveTime.Sub(sendTime)
 
 	NewSMSStatusToTSDB(p.Profile().ID, status, delayTime, sendTime)
 
