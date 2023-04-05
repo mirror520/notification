@@ -1,48 +1,14 @@
-influxdb:
-  url: http://influxdb:8086
-  org: tccg
-  bucket: sms
-  token: token
-
-every8d:
-  baseurl: https://oms.every8d.com/API21/HTTP
-  callbackurl: https://sms.tccgov.tw/api/v1/sms/status/every8d/callback
-
-mitake:
-  baseurl: https://smsapi.mitake.com.tw/api/mtk
-  callbackurl: https://sms.tccgov.tw/api/v1/sms/status/mitake/callback
-
 providers:
-- id: every8d
-  type: 0 # 0: Every8D; 1: Mitake
-  role: 1 # 1: Master;  0: Backup
-  account: 
+  every8d:
+    type: every8d
     username: username
     password: password
-- id: mitake
-  type: 1
-  role: 0
-  account: 
+    baseUrl: https://oms.every8d.com/API21/HTTP
+    callbackUrl: https://api.linyc.idv.tw/notification/v1/providers/every8d/status/callback
+  
+  mitake:
+    type: mitake
     username: username
     password: password
-
----
-# Mapping Environment Variables
-# SMS_INFLUXDB_URL
-# SMS_INFLUXDB_ORG
-# SMS_INFLUXDB_BUCKET
-# SMS_INFLUXDB_TOKEN
-# SMS_EVERY8D_BASEURL
-# SMS_EVERY8D_CALLBACKURL
-# SMS_MITAKE_BASEURL
-# SMS_MITAKE_CALLBACKURL
-# SMS_PROVIDERS_0_ID
-# SMS_PROVIDERS_0_TYPE
-# SMS_PROVIDERS_0_ROLE
-# SMS_PROVIDERS_0_ACCOUNT_USERNAME
-# SMS_PROVIDERS_0_ACCOUNT_PASSWORD
-# SMS_PROVIDERS_1_ID
-# SMS_PROVIDERS_1_TYPE
-# SMS_PROVIDERS_1_ROLE
-# SMS_PROVIDERS_1_ACCOUNT_USERNAME
-# SMS_PROVIDERS_1_ACCOUNT_PASSWORD
+    baseUrl: https://smsapi.mitake.com.tw/api/mtk
+    callbackUrl: https://api.linyc.idv.tw/notification/v1/providers/mitake/status/callback
